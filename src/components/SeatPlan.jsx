@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Stage, Layer, Image, Transformer, Rect, Group,Text } from "react-konva";
+import {
+  Stage,
+  Layer,
+  Image,
+  Transformer,
+  Rect,
+  Group,
+  Text,
+} from "react-konva";
 import WheelchairIcon from "../assets/icons/wheeleChair_red_1.svg"; // Import your SVG as a React component
 
 const SeatPlan = () => {
@@ -31,6 +39,7 @@ const SeatPlan = () => {
       image.onload = () => setSeatImage(image);
     }
   }, []);
+  
 
   // Function to dynamically create seats based on user input
   const createSeats = () => {
@@ -56,24 +65,68 @@ const SeatPlan = () => {
     setSeats((prevSeats) => [...prevSeats, ...newSeats]);
   };
 
+  const handleGroupDragMove = (groupId) => {
+    const group = groups.find((g) => g.id === groupId);
+  
+    if (group) {
+      const groupNode = stageRef.current.findOne(); 
+      console.log(stageRef.current)
+      console.log(groupNode)
+      // Assuming you have a ref to the stage
+      if(groupNode){
+        const { x: groupX, y: groupY } = groupNode.getPosition();
+        const updatedSeats = seats.map((seat) => {
+          if (seat.groupId === groupId) {
+            const relativeX = seat.x - groupNode.oldX;
+            const relativeY = seat.y - groupNode.oldY;
+            return {
+              ...seat,
+              x: groupX + relativeX,
+              y: groupY + relativeY,
+            };
+          }
+          return seat;
+        });
+    
+        setSeats(updatedSeats);
+    
+        // Store the group's new position as oldX and oldY for reference
+        groupNode.oldX = groupX;
+        groupNode.oldY = groupY;
+      }
+     
+  
+
+    }
+  };
   // Function to group selected seats
   const groupSelectedSeats = () => {
     if (selectedSeatIds.length > 0) {
+      // Create a new group only if there are seats to group
       const newGroupId = `group${groups.length + 1}`;
       const group = {
         id: newGroupId,
         seatIds: [...selectedSeatIds],
       };
 
-      // Update seats with group ID
-      const updatedSeats = seats.map((seat) =>
-        selectedSeatIds.includes(seat.id)
-          ? { ...seat, groupId: newGroupId }
-          : seat
+      // Update seats with the new group ID
+      const updatedSeats = seats.map((seat) => {
+        if (selectedSeatIds.includes(seat.id)) {
+          return { ...seat, groupId: newGroupId };
+        }
+        return seat;
+      });
+
+      // Check if the seats being grouped already belong to an existing group
+      const existingGroups = groups.filter(
+        (g) => !g.seatIds.every((seatId) => selectedSeatIds.includes(seatId))
       );
 
+      // Set groups to include the new group, without duplicating existing groups
+      setGroups([...existingGroups, group]);
+
+      // Update seats state
       setSeats(updatedSeats);
-      setGroups([...groups, group]);
       setSelectedSeatIds([]); // Clear selection after grouping
     }
   };
@@ -81,13 +134,16 @@ const SeatPlan = () => {
   // Function to ungroup selected seats
   const ungroupSelectedSeats = () => {
     if (selectedSeatIds.length > 0) {
+      // Update seats with group ID removed, but keep other properties (like position) intact
       const updatedSeats = seats.map((seat) =>
-        selectedSeatIds.includes(seat.id) ? { ...seat, groupId: null } : seat
+        selectedSeatIds.includes(seat.id)
+          ? { ...seat, groupId: null, x: seat.x, y: seat.y } // Remove groupId only
+          : seat
       );
 
       setSeats(updatedSeats);
 
-      // Remove groups that have no seats
+      // Remove groups that no longer have any seats
       const updatedGroups = groups.filter(
         (group) =>
           !group.seatIds.every((seatId) => selectedSeatIds.includes(seatId))
@@ -97,11 +153,10 @@ const SeatPlan = () => {
       setSelectedSeatIds([]); // Clear selection after ungrouping
     }
   };
+
   const updateSeatLabels = () => {
     const updatedSeats = seats.map((seat) =>
-      selectedSeatIds.includes(seat.id)
-        ? { ...seat, label: newLabel }
-        : seat
+      selectedSeatIds.includes(seat.id) ? { ...seat, label: newLabel } : seat
     );
 
     setSeats(updatedSeats);
@@ -111,9 +166,9 @@ const SeatPlan = () => {
   // Function to start selection
   const handleMouseDown = (e) => {
     if (e.target !== stageRef.current) return;
-  
+
     const { x, y } = stageRef.current.getPointerPosition();
-  
+
     if (isCreatingSeats) {
       // Start creating seats: initialize start point for dragging
       setStartPoint({ x, y });
@@ -125,52 +180,7 @@ const SeatPlan = () => {
       setStartPoint({ x, y });
     }
   };
-  
-  // Function to handle mouse move event for both selection and seat creation
-  // const handleMouseMove = (e) => {
-  //   if (!isSelecting) return;
-  
-  //   const { x, y } = stageRef.current.getPointerPosition();
-  //   const { x: startX, y: startY } = startPoint;
-  
-  //   if (isCreatingSeats) {
-  //     // Seat creation logic
-  //     const width = x - startX;
-  
-  //     if (width > 0) {
-  //       const seatWidth = 50;
-  //       const gap = 20;
-  
-  //       // Clear previous temporary seats
-  //       setSeats((prevSeats) => prevSeats.filter((seat) => !seat.isTemporary));
-  
-  //       const newSeats = [];
-  //       for (let i = 0; i * (seatWidth + gap) < width; i++) {
-  //         newSeats.push({
-  //           id: `tempSeat${Date.now()}-${i}`,
-  //           x: startX + i * (seatWidth + gap),
-  //           y: startY,
-  //           width: seatWidth,
-  //           height: seatWidth, // Assuming square seats
-  //           image: seatImage,
-  //           seatType: "Standard",
-  //           groupId: null,
-  //           label: `Temp ${i + 1}`,
-  //           isTemporary: true, // Indicate that these seats are temporary
-  //         });
-  //       }
-  //       setSeats((prevSeats) => [...prevSeats, ...newSeats]);
-  //     }
-  //   } else {
-  //     // Selection logic: update selection rectangle
-  //     setSelectionRect({
-  //       x: startX,
-  //       y: startY,
-  //       width: x - startX,
-  //       height: y - startY,
-  //     });
-  //   }
-  // };
+
   const handleMouseMove = (e) => {
     if (!isSelecting) return;
   
@@ -178,33 +188,42 @@ const SeatPlan = () => {
     const { x: startX, y: startY } = startPoint;
   
     if (isCreatingSeats) {
-      // Seat creation logic
-      const width = x - startX;
+      const seatWidth = 50;
+      const gap = 20;
   
-      if (width > 0) {
-        const seatWidth = 50;
-        const gap = 20;
+      // Clear previous temporary seats
+      setSeats((prevSeats) => prevSeats.filter((seat) => !seat.isTemporary));
   
-        // Clear previous temporary seats
-        setSeats((prevSeats) => prevSeats.filter((seat) => !seat.isTemporary));
+      // Calculate the distance between the start and current mouse position
+      const deltaX = x - startX;
+      const deltaY = y - startY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   
-        const newSeats = [];
-        for (let i = 0; i * (seatWidth + gap) < width; i++) {
-          newSeats.push({
-            id: `tempSeat${Date.now()}-${i}`,
-            x: startX + i * (seatWidth + gap),
-            y: startY,
-            width: seatWidth,
-            height: seatWidth, // Assuming square seats
-            image: seatImage,
-            seatType: "Standard",
-            groupId: null,
-            label: `Temp ${i + 1}`,
-            isTemporary: true, // Indicate that these seats are temporary
-          });
-        }
-        setSeats((prevSeats) => [...prevSeats, ...newSeats]);
+      // Calculate the angle of movement
+      const angle = Math.atan2(deltaY, deltaX); // This gives the angle in radians
+  
+      const newSeats = [];
+      const numSeats = Math.floor(distance / (seatWidth + gap));
+  
+      for (let i = 0; i <= numSeats; i++) {
+        const seatX = startX + (i * (seatWidth + gap)) * Math.cos(angle);
+        const seatY = startY + (i * (seatWidth + gap)) * Math.sin(angle);
+  
+        newSeats.push({
+          id: `tempSeat-${Date.now()}-${i}`,
+          x: seatX,
+          y: seatY,
+          width: seatWidth,
+          height: seatWidth,
+          image: seatImage,
+          seatType: "Standard",
+          groupId: null,
+          label: `${i + 1}`,
+          isTemporary: true,
+        });
       }
+  
+      setSeats((prevSeats) => [...prevSeats, ...newSeats]);
     } else {
       // Selection logic: update selection rectangle
       setSelectionRect({
@@ -216,57 +235,38 @@ const SeatPlan = () => {
     }
   };
   
-  
-  // Function to handle mouse up event for both selection and seat creation
-  // const handleMouseUp = () => {
-  //   if (!isSelecting) return;
-  
-  //   if (isCreatingSeats) {
-  //     // Finalize seat creation by marking temporary seats as permanent
-  //     setSeats((prevSeats) =>
-  //       prevSeats.map((seat) =>
-  //         seat.isTemporary ? { ...seat, isTemporary: false } : seat
-  //       )
-  //     );
-  //   } else {
-  //     // Finalize selection
-  //     const selectionBox = {
-  //       x: selectionRect.x,
-  //       y: selectionRect.y,
-  //       width: selectionRect.width,
-  //       height: selectionRect.height,
-  //     };
-  
-  //     const selectedIds = seats
-  //       .filter((seat) => {
-  //         const seatRect = {
-  //           x: seat.x,
-  //           y: seat.y,
-  //           width: seat.width,
-  //           height: seat.height,
-  //         };
-  //         return rectsIntersect(selectionBox, seatRect);
-  //       })
-  //       .map((seat) => seat.id);
-  
-  //     setSelectedSeatIds(selectedIds);
-  //   }
-  
-  //   // Reset states
-  //   setIsSelecting(false);
-  //   setStartPoint(null);
-  // };
 
   const handleMouseUp = () => {
     if (!isSelecting) return;
-  
+
     if (isCreatingSeats) {
       // Finalize seat creation by marking temporary seats as permanent
-      setSeats((prevSeats) =>
-        prevSeats.map((seat) =>
-          seat.isTemporary ? { ...seat, isTemporary: false } : seat
-        )
+      const newSeats = seats.filter((seat) => seat.isTemporary);
+      const updatedSeats = seats.map((seat) =>
+        seat.isTemporary ? { ...seat, isTemporary: false } : seat
       );
+
+      // If more than one seat was created, group them with a unique group ID
+      if (newSeats.length > 1) {
+        const newGroupId = `group${groups.length + 1}`;
+        const group = {
+          id: newGroupId,
+          seatIds: newSeats.map((seat) => seat.id),
+        };
+
+        // Assign the groupId to the newly created seats
+        const finalSeats = updatedSeats.map((seat) =>
+          newSeats.some((newSeat) => newSeat.id === seat.id)
+            ? { ...seat, groupId: newGroupId }
+            : seat
+        );
+
+        setSeats(finalSeats);
+        setGroups([...groups, group]);
+      } else {
+        // If only one seat was created, just update the seats without grouping
+        setSeats(updatedSeats);
+      }
     } else {
       // Finalize selection
       const selectionBox = {
@@ -275,7 +275,7 @@ const SeatPlan = () => {
         width: selectionRect.width,
         height: selectionRect.height,
       };
-  
+
       const selectedIds = seats
         .filter((seat) => {
           const seatRect = {
@@ -287,15 +287,14 @@ const SeatPlan = () => {
           return rectsIntersect(selectionBox, seatRect);
         })
         .map((seat) => seat.id);
-  
+
       setSelectedSeatIds(selectedIds);
     }
-  
+
     // Reset states
     setIsSelecting(false);
     setStartPoint(null);
   };
-  
 
   // Function to check if two rectangles intersect
   const rectsIntersect = (r1, r2) => {
@@ -323,7 +322,7 @@ const SeatPlan = () => {
       transformer.getLayer().batchDraw();
     }
   }, [selectedSeatIds]);
-  
+
   const handleStartCreatingSeats = () => {
     setIsCreatingSeats(true);
   };
@@ -370,43 +369,44 @@ const SeatPlan = () => {
         <Layer ref={layerRef}>
           {/* Render groups */}
           {groups.map((group) => (
-            <Group key={group.id} draggable>
+            <Group key={group.id} draggable
+            onDragMove={() => handleGroupDragMove(group.id)}>
               {seats
                 .filter((seat) => group.seatIds.includes(seat.id))
                 .map((seat) => (
                   <Group key={seat.id} id={seat.id} draggable>
-                     <Image
-                    key={seat.id}
-                    id={seat.id}
-                    x={seat.x}
-                    y={seat.y}
-                    width={seat.width}
-                    height={seat.height}
-                    image={seat.image}
-                    draggable={false}
-                    onClick={() => {
-                      // Find all seats with the same groupId and select them
-                      const seatsInSameGroup = seats.filter(
-                        (s) => s.groupId === seat.groupId
-                      );
-                      const seatIdsInSameGroup = seatsInSameGroup.map(
-                        (s) => s.id
-                      );
-                      setSelectedSeatIds(seatIdsInSameGroup);
-                      console.log(`Group ID: ${seat.groupId}`); // Log group ID when seat is clicked
-                    }}
-                  />
-                     <Text
-                  x={seat.x + seat.width / 2}
-                  y={seat.y + seat.height / 2}
-                  text={seat.label}
-                  fontSize={16}
-                  fill="black"
-                  offsetX={seat.width / 4} // Center the text
-                  offsetY={8} // Adjust vertical centering
-                  draggable={false}
-                />
-                  </Group>                 
+                    <Image
+                      key={seat.id}
+                      id={seat.id}
+                      x={seat.x}
+                      y={seat.y}
+                      width={seat.width}
+                      height={seat.height}
+                      image={seat.image}
+                      draggable={false}
+                      onClick={() => {
+                        // Find all seats with the same groupId and select them
+                        const seatsInSameGroup = seats.filter(
+                          (s) => s.groupId === seat.groupId
+                        );
+                        const seatIdsInSameGroup = seatsInSameGroup.map(
+                          (s) => s.id
+                        );
+                        setSelectedSeatIds(seatIdsInSameGroup);
+                        console.log(`Group ID: ${seat.groupId}`); // Log group ID when seat is clicked
+                      }}
+                    />
+                    <Text
+                      x={seat.x + seat.width / 2}
+                      y={seat.y + seat.height / 2}
+                      text={seat.label}
+                      fontSize={16}
+                      fill="black"
+                      offsetX={seat.width / 4} // Center the text
+                      offsetY={8} // Adjust vertical centering
+                      draggable={false}
+                    />
+                  </Group>
                 ))}
             </Group>
           ))}
