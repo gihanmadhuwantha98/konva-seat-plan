@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
+  <g id="wheeleChair_red" transform="translate(0.5 0.076)">
+    <rect id="Rectangle_8" data-name="Rectangle 8" width="13" height="13" rx="3" transform="translate(0 0.424)" fill="none" stroke="#ff2929" stroke-width="1"/>
+    <path id="Path_3" data-name="Path 3" d="M9.38,9.927A2.533,2.533,0,1,1,5.873,6.991" transform="translate(-1.003 -0.683)" fill="none" stroke="#ff2929" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.104"/>
+    <path id="Path_4" data-name="Path 4" d="M7.009,5.012l.422,3.8L10.6,8.6l.633,2.321h.633" transform="translate(-1.084 -0.622)" fill="none" stroke="#ff2929" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.104"/>
+    <path id="Path_5" data-name="Path 5" d="M8.458,6.646h1.688M7.825,4.114a.844.844,0,1,1-.247-.6A.844.844,0,0,1,7.825,4.114Z" transform="translate(-1.057 -0.569)" fill="none" stroke="#ff2929" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.104"/>
+  </g>
+</svg>
