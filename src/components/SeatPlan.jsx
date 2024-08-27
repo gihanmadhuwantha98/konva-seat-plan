@@ -132,27 +132,31 @@ const SeatPlan = () => {
   };
 
   // Function to ungroup selected seats
-  const ungroupSelectedSeats = () => {
-    if (selectedSeatIds.length > 0) {
-      // Update seats with group ID removed, but keep other properties (like position) intact
-      const updatedSeats = seats.map((seat) =>
-        selectedSeatIds.includes(seat.id)
-          ? { ...seat, groupId: null, x: seat.x, y: seat.y } // Remove groupId only
-          : seat
-      );
+const ungroupSelectedSeats = () => {
+  if (selectedSeatIds.length > 0) {
+    const updatedSeats = [...seats]; // Create a copy of the seats array to avoid direct state mutation
 
-      setSeats(updatedSeats);
+    // Loop through each seat and remove the groupId for selected seats
+    updatedSeats.forEach((seat) => {
+      if (selectedSeatIds.includes(seat.id)) {
+        seat.groupId = null; // Remove the groupId
+      }
+    });
 
-      // Remove groups that no longer have any seats
-      const updatedGroups = groups.filter(
-        (group) =>
-          !group.seatIds.every((seatId) => selectedSeatIds.includes(seatId))
-      );
+    // Update the seats state with the modified array
+    setSeats(updatedSeats);
 
-      setGroups(updatedGroups);
-      setSelectedSeatIds([]); // Clear selection after ungrouping
-    }
-  };
+    // Remove groups that no longer have any seats
+    const updatedGroups = groups.filter(
+      (group) =>
+        !group.seatIds.every((seatId) => selectedSeatIds.includes(seatId))
+    );
+
+    setGroups(updatedGroups);
+    setSelectedSeatIds([]); // Clear selection after ungrouping
+  }
+};
+
 
   const updateSeatLabels = () => {
     const updatedSeats = seats.map((seat) =>
@@ -179,6 +183,12 @@ const SeatPlan = () => {
       setIsSelecting(true);
       setStartPoint({ x, y });
     }
+    const seatNode = e.target;
+
+  // if (seatNode && seatNode.attrs.isSeat) {
+  //   // Disable dragging for the seat
+  //   seatNode.draggable(false);
+  // }
   };
 
   const handleMouseMove = (e) => {
@@ -220,6 +230,7 @@ const SeatPlan = () => {
           groupId: null,
           label: `${i + 1}`,
           isTemporary: true,
+          draggable:false
         });
       }
   
@@ -310,18 +321,49 @@ const SeatPlan = () => {
   useEffect(() => {
     const stage = stageRef.current;
     const transformer = transformerRef.current;
-
+  
     if (selectedSeatIds.length > 0 && transformer && stage) {
-      const selectedNodes = selectedSeatIds.map((id) =>
-        stage.findOne(`#${id}`)
-      );
-      transformer.nodes(selectedNodes);
-      transformer.getLayer().batchDraw();
+      // Collect all selected nodes (including seats in the same group)
+      const selectedNodes = [];
+  
+      selectedSeatIds.forEach((id) => {
+        const seatNode = stage.findOne(`#${id}`);
+        
+        if (seatNode) {
+          // Check if the seat belongs to a group
+          const seat = seats.find(seat => seat.id === id);
+          if (seat && seat.groupId) {
+            // Find all seats in the same group
+            const groupSeats = seats.filter(s => s.groupId === seat.groupId);
+            
+            // Add all seats in the group to the selected nodes
+            groupSeats.forEach(groupSeat => {
+              const groupSeatNode = stage.findOne(`#${groupSeat.id}`);
+              if (groupSeatNode) {
+                selectedNodes.push(groupSeatNode);
+              }
+            });
+          } else {
+            // Add individual seat node if it doesn't belong to a group
+            selectedNodes.push(seatNode);
+          }
+        }
+      });
+  
+      if (selectedNodes.length > 0) {
+        // Set the transformer to the selected nodes
+        transformer.nodes(selectedNodes);
+        transformer.getLayer().batchDraw();
+      } else {
+        transformer.detach();
+        transformer.getLayer().batchDraw();
+      }
     } else {
       transformer.detach();
       transformer.getLayer().batchDraw();
     }
-  }, [selectedSeatIds]);
+  }, [selectedSeatIds, seats]); // Add seats as a dependency to update when seats change
+  
 
   const handleStartCreatingSeats = () => {
     setIsCreatingSeats(true);
@@ -330,18 +372,20 @@ const SeatPlan = () => {
   const handleStopCreatingSeats = () => {
     setIsCreatingSeats(false);
   };
+  
 
   return (
     <div>
       {/* Input for seat count */}
       <div style={{ padding: "10px", textAlign: "center" }}>
-        <input
+        {/* <input
           type="number"
           value={seatCount}
           onChange={(e) => setSeatCount(parseInt(e.target.value))}
           placeholder="Enter number of seats"
-        />
-        <button onClick={createSeats}>Create Seats</button>
+        /> */}
+        {/*  <button onClick={createSeats}>Create Seats</button>*/}
+       
         <button onClick={groupSelectedSeats}>Group Selected Seats</button>
         <button onClick={ungroupSelectedSeats}>Ungroup Selected Seats</button>
         <button onClick={handleStartCreatingSeats}>Start Creating Seats</button>
@@ -369,7 +413,7 @@ const SeatPlan = () => {
         <Layer ref={layerRef}>
           {/* Render groups */}
           {groups.map((group) => (
-            <Group key={group.id} draggable
+            <Group key={group.id} draggable={false}
             onDragMove={() => handleGroupDragMove(group.id)}>
               {seats
                 .filter((seat) => group.seatIds.includes(seat.id))
@@ -414,7 +458,7 @@ const SeatPlan = () => {
           {seats
             .filter((seat) => !seat.groupId)
             .map((seat) => (
-              <Group key={seat.id} id={seat.id} draggable>
+              <Group key={seat.id} id={seat.id} draggable={false}>
                 <Image
                   key={seat.id}
                   id={seat.id}
