@@ -29,6 +29,7 @@ const SeatPlan = () => {
   const [startPoint, setStartPoint] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
   const [isLabelLeftToRight, setIsLabelLeftToRight] = useState(true);
+  const [startNumber, setStartNumber] = useState(1);
 
   const transformerRef = useRef(null);
   const stageRef = useRef(null);
@@ -43,57 +44,57 @@ const SeatPlan = () => {
     }
   }, []);
 
-//   useEffect(() => {
-//     const stage = stageRef.current;
-//     const transformer = transformerRef.current;
+  //   useEffect(() => {
+  //     const stage = stageRef.current;
+  //     const transformer = transformerRef.current;
 
-//     if (selectedSeatIds.length > 0 && transformer && stage) {
-//       // Collect all selected nodes (including seats in the same group)
-//       const selectedNodes = [];
+  //     if (selectedSeatIds.length > 0 && transformer && stage) {
+  //       // Collect all selected nodes (including seats in the same group)
+  //       const selectedNodes = [];
 
-//       selectedSeatIds.forEach((id) => {
-//         const seatNode = stage.findOne(`#${id}`);
+  //       selectedSeatIds.forEach((id) => {
+  //         const seatNode = stage.findOne(`#${id}`);
 
-//         if (seatNode) {
-//           // Check if the seat belongs to a group
-//           const seat = seats.find((seat) => seat.id === id);
-//           if (seat && seat.groupId) {
-//             // Find all seats in the same group
-//             const groupSeats = seats.filter((s) => s.groupId === seat.groupId);
+  //         if (seatNode) {
+  //           // Check if the seat belongs to a group
+  //           const seat = seats.find((seat) => seat.id === id);
+  //           if (seat && seat.groupId) {
+  //             // Find all seats in the same group
+  //             const groupSeats = seats.filter((s) => s.groupId === seat.groupId);
 
-//             // Add all seats in the group to the selected nodes
-//             groupSeats.forEach((groupSeat) => {
-//               const groupSeatNode = stage.findOne(`#${groupSeat.id}`);
-//               if (groupSeatNode) {
-//                 selectedNodes.push(groupSeatNode);
-//               }
-//             });
-//           } else {
-//             // Add individual seat node if it doesn't belong to a group
-//             selectedNodes.push(seatNode);
-//           }
-//         }
-//       });
-//       console.log(selectedNodes)
-//       if (selectedNodes.length > 1) {
-//         // Set the transformer to the selected nodes
-//         transformer.nodes(selectedNodes);
-//         transformer.getLayer().batchDraw();
-//       }if (selectedNodes.length > 0) {
-//         // Set the transformer to the selected nodes
-//         transformer.nodes(selectedNodes);
-//        // transformer.getLayer().batchDraw();
-//       } else {
-//        // transformer.detach();
-//        // transformer.getLayer().batchDraw();
-//       }
-//     }
-//      else {
-// //transformer.detach();
-//      // transformer.getLayer().batchDraw();
-//     }
-//   }, [selectedSeatIds, seats]);
-  
+  //             // Add all seats in the group to the selected nodes
+  //             groupSeats.forEach((groupSeat) => {
+  //               const groupSeatNode = stage.findOne(`#${groupSeat.id}`);
+  //               if (groupSeatNode) {
+  //                 selectedNodes.push(groupSeatNode);
+  //               }
+  //             });
+  //           } else {
+  //             // Add individual seat node if it doesn't belong to a group
+  //             selectedNodes.push(seatNode);
+  //           }
+  //         }
+  //       });
+  //       console.log(selectedNodes)
+  //       if (selectedNodes.length > 1) {
+  //         // Set the transformer to the selected nodes
+  //         transformer.nodes(selectedNodes);
+  //         transformer.getLayer().batchDraw();
+  //       }if (selectedNodes.length > 0) {
+  //         // Set the transformer to the selected nodes
+  //         transformer.nodes(selectedNodes);
+  //        // transformer.getLayer().batchDraw();
+  //       } else {
+  //        // transformer.detach();
+  //        // transformer.getLayer().batchDraw();
+  //       }
+  //     }
+  //      else {
+  // //transformer.detach();
+  //      // transformer.getLayer().batchDraw();
+  //     }
+  //   }, [selectedSeatIds, seats]);
+
   useEffect(() => {
     const stage = stageRef.current;
     const transformer = transformerRef.current;
@@ -193,46 +194,73 @@ const SeatPlan = () => {
   // };
 
   const updateSeatLabels = () => {
-    const updatedSeats = seats.map((seat) =>
-      selectedSeatIds.includes(seat.id) ? { ...seat, label: newLabel } : seat
-    );
-
-    setSeats(updatedSeats);
-    setNewLabel(""); // Clear the input field after updating
+    const stage = stageRef.current;
+  
+    if (selectedSeatIds.length > 0 && stage) {
+      const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
+      if (!firstSeat || !firstSeat.groupId) return;
+  
+      const groupSeats = seats.filter(
+        (seat) => seat.groupId === firstSeat.groupId
+      );
+  
+      let currentNumber = startNumber;
+  
+      const updatedSeats = groupSeats.map((seat, index) => {
+        let newLabel;
+        if (isLabelLeftToRight) {
+          newLabel = `${currentNumber++}`;
+        } else {
+          newLabel = `${startNumber + groupSeats.length - 1 - index}`;
+        }
+        return { ...seat, label: newLabel };
+      });
+  
+      setSeats((prevSeats) =>
+        prevSeats.map((seat) =>
+          seat.groupId === firstSeat.groupId
+            ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
+            : seat
+        )
+      );
+    }
   };
+  
+  
 
   const handleToggleLabelDirection = () => {
     if (selectedSeatIds.length === 0) return;
   
-    const firstSeat = seats.find(seat => selectedSeatIds.includes(seat.id));
+    const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
     if (!firstSeat || !firstSeat.groupId) return;
   
-    const groupSeats = seats.filter(seat => seat.groupId === firstSeat.groupId);
+    const groupSeats = seats.filter(
+      (seat) => seat.groupId === firstSeat.groupId
+    );
   
-    const updatedSeats = groupSeats.map((seat, index) => {
-      const newLabel = isLabelLeftToRight ? `${index + 1}` : `${groupSeats.length - index}`;
-      return { ...seat, label: newLabel };
-    });
+    // Store the current labels before changing direction
+    const currentLabels = groupSeats.map((seat) => seat.label);
   
-    setSeats(prevSeats => 
-      prevSeats.map(seat => 
-        seat.groupId === firstSeat.groupId 
-          ? updatedSeats.find(updatedSeat => updatedSeat.id === seat.id) 
+    // Reverse the order of the current labels
+    const updatedSeats = groupSeats.map((seat, index) => ({
+      ...seat,
+      label: currentLabels[currentLabels.length - 1 - index], // Assign reversed labels
+    }));
+  
+    setSeats((prevSeats) =>
+      prevSeats.map((seat) =>
+        seat.groupId === firstSeat.groupId
+          ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
           : seat
       )
     );
   
-    setIsLabelLeftToRight(!isLabelLeftToRight)
+    setIsLabelLeftToRight(!isLabelLeftToRight);
+  
+    // Log the current labels (optional)
+    console.log("Current Labels (Reversed):", currentLabels.reverse());
   };
-
-  // const deleteSeat = () => {
-  //   if (selectedSeatIds !== null) {
-  //     setSeats((prevSeats) => prevSeats.filter((seat) => seat.id !== selectedSeatIds));
-  //     setSelectedSeatIds(null); // Clear selection after deletion
-  //   }
-  // };
-
-  // Function to start selection
+  
   const handleMouseDown = (e) => {
     if (e.target !== stageRef.current) return;
 
@@ -279,7 +307,7 @@ const SeatPlan = () => {
         const seatX = startX + i * (seatWidth + gap) * Math.cos(angle);
         const seatY = startY + i * (seatWidth + gap) * Math.sin(angle);
 
-       // const label = isLabelLeftToRight ? `${i + 1}` : `${numSeats - i + 1}`;
+        // const label = isLabelLeftToRight ? `${i + 1}` : `${numSeats - i + 1}`;
 
         newSeats.push({
           id: `tempSeat-${Date.now()}-${i}`,
@@ -290,7 +318,7 @@ const SeatPlan = () => {
           image: seatImage,
           seatType: "Standard",
           groupId: null,
-          label:i+1,
+          label: i + 1,
           // label:label,
           isTemporary: true,
           draggable: false,
@@ -381,31 +409,57 @@ const SeatPlan = () => {
 
   const deleteSelectedSeats = () => {
     const stage = stageRef.current;
-  
+
     if (selectedSeatIds.length > 0 && stage) {
-      // Iterate over selectedSeatIds and remove each seat
-      selectedSeatIds.forEach((id) => {
-        const seatNode = stage.findOne(`#${id}`);
-        if (seatNode) {
-          seatNode.destroy(); // Remove the seat node from the canvas
-        }
-      });
-  
-      // Remove seats from the state
-      setSeats((prevSeats) =>
-        prevSeats.filter((seat) => !selectedSeatIds.includes(seat.id))
+      // Get the groupId of the first selected seat (assuming all selected seats are from the same group)
+      const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
+      if (!firstSeat || !firstSeat.groupId) return;
+
+      const groupId = firstSeat.groupId;
+
+      // Get all seats in the group
+      const groupSeats = seats.filter((seat) => seat.groupId === groupId);
+
+      // Sort group seats by their x-position (you can modify this if sorting by y-position is needed)
+      const sortedGroupSeats = groupSeats.sort((a, b) => a.x - b.x);
+
+      // Identify the index of the first selected seat in the sorted group
+      const selectedSeatIndex = sortedGroupSeats.findIndex((seat) =>
+        selectedSeatIds.includes(seat.id)
       );
-  
+
+      // Remove selected seats from the group
+      const remainingSeats = sortedGroupSeats.filter(
+        (seat) => !selectedSeatIds.includes(seat.id)
+      );
+
+      // Split the remaining seats into two groups based on the position of the deleted seat
+      const leftGroup = remainingSeats.slice(0, selectedSeatIndex);
+      const rightGroup = remainingSeats.slice(selectedSeatIndex);
+
+      // Update the seats state with the new group IDs
+      setSeats((prevSeats) =>
+        prevSeats
+          .filter((seat) => !selectedSeatIds.includes(seat.id)) // Remove the deleted seats
+          .map((seat) => {
+            if (leftGroup.some((leftSeat) => leftSeat.id === seat.id)) {
+              return { ...seat, groupId: groupId }; // Left group keeps the original group ID
+            } else if (
+              rightGroup.some((rightSeat) => rightSeat.id === seat.id)
+            ) {
+              return { ...seat, groupId: `group-${Date.now()}` }; // Right group gets a new group ID
+            }
+            return seat;
+          })
+      );
+
       // Clear the selection
       setSelectedSeatIds([]);
-      
+
       // Redraw the layer
       stage.batchDraw();
     }
   };
-  
-
-  // Effect to update transformer when the selected seats change
 
   const handleStartCreatingSeats = () => {
     setIsCreatingSeats(true);
@@ -451,7 +505,6 @@ const SeatPlan = () => {
 
     return gridElements;
   };
-  
 
   return (
     <div>
@@ -461,27 +514,22 @@ const SeatPlan = () => {
           <button onClick={() => setActiveTool("draw")}>Draw Tool</button>
           <button onClick={() => setActiveTool("select")}>Select Tool</button>
           <button onClick={toggleGrid}>
-
             {gridVisible ? "Hide Grid" : "Show Grid"}
           </button>
-          <button  onClick={deleteSelectedSeats}>
-          Delete
-        </button>
-        <button  onClick={toggleSingleSelect}>
-          Single Click
-        </button>
-        <button onClick={handleToggleLabelDirection}>
-  Toggle Label Direction
-</button>
+          <button onClick={deleteSelectedSeats}>Delete</button>
+          <button onClick={toggleSingleSelect}>Single Click</button>
+          <button onClick={handleToggleLabelDirection}>
+            Toggle Label Direction
+          </button>
         </div>
-        <div style={{ marginTop: "10px" }}>
+        <div>
           <input
-            type="text"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Enter new label"
+            type="number"
+            value={startNumber}
+            onChange={(e) => setStartNumber(parseInt(e.target.value))}
+            placeholder="Enter starting number"
           />
-          <button onClick={updateSeatLabels}>Update Labels</button>
+          <button onClick={updateSeatLabels}>Set Starting Number</button>
         </div>
       </div>
 
@@ -519,12 +567,12 @@ const SeatPlan = () => {
                         const seatIdsInSameGroup = seatsInSameGroup.map(
                           (s) => s.id
                         );
-                        if(!isSingleSelect){
+                        if (!isSingleSelect) {
                           setSelectedSeatIds(seatIdsInSameGroup);
                         } else {
                           setSelectedSeatIds([seat.id]);
                         }
-                       
+
                         console.log(`Group ID: ${seat.groupId}`); // Log group ID when seat is clicked
                       }}
                     />
@@ -545,8 +593,8 @@ const SeatPlan = () => {
                         const seatIdsInSameGroup = seatsInSameGroup.map(
                           (s) => s.id
                         );
-                        
-                        if(!isSingleSelect){
+
+                        if (!isSingleSelect) {
                           setSelectedSeatIds(seatIdsInSameGroup);
                         } else {
                           setSelectedSeatIds([seat.id]);
@@ -601,7 +649,7 @@ const SeatPlan = () => {
               fill="rgba(0, 162, 255, 0.3)"
               stroke="blue"
               strokeWidth={1}
-              custum={'wdwd'}
+              custum={"wdwd"}
             />
           )}
 
