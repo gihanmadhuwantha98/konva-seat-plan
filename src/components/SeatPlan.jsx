@@ -12,9 +12,9 @@ import WheelchairIcon from "../assets/icons/wheeleChair_red_1.svg"; // Import yo
 
 const SeatPlan = () => {
   const [seats, setSeats] = useState([]);
+  const [groups, setGroups] = useState([]); 
   const [selectedSeatIds, setSelectedSeatIds] = useState([]);
   const [isSelecting, setIsSelecting] = useState(false);
-  const [isCreatingSeats, setIsCreatingSeats] = useState(false);
   const [isSingleSelect, setisSingleSelect] = useState(false);
   const [gridVisible, setGridVisible] = useState(false);
   const [selectionRect, setSelectionRect] = useState({
@@ -24,12 +24,12 @@ const SeatPlan = () => {
     height: 0,
   });
   const [seatImage, setSeatImage] = useState(null);
-  const [groups, setGroups] = useState([]); // To store created groups
-  const [newLabel, setNewLabel] = useState("");
   const [startPoint, setStartPoint] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
   const [isLabelLeftToRight, setIsLabelLeftToRight] = useState(true);
   const [startNumber, setStartNumber] = useState(1);
+  // const [seatCount, setSeatCount] = useState(0);
+  const [seatSpacing, setSeatSpacing] = useState(20)
 
   const transformerRef = useRef(null);
   const stageRef = useRef(null);
@@ -43,7 +43,7 @@ const SeatPlan = () => {
       image.onload = () => setSeatImage(image);
     }
   }, []);
-
+ 
   //   useEffect(() => {
   //     const stage = stageRef.current;
   //     const transformer = transformerRef.current;
@@ -136,131 +136,8 @@ const SeatPlan = () => {
   //   setSeats((prevSeats) => [...prevSeats, ...newSeats]);
   // };
 
-  // const groupSelectedSeats = () => {
-  //   if (selectedSeatIds.length > 0) {
-  //     const newGroupId = `group${groups.length + 1}`;
-  //     const group = {
-  //       id: newGroupId,
-  //       seatIds: [...selectedSeatIds],
-  //     };
 
-  //     // Update seats with the new group ID
-  //     const updatedSeats = seats.map((seat) => {
-  //       if (selectedSeatIds.includes(seat.id)) {
-  //         return { ...seat, groupId: newGroupId };
-  //       }
-  //       return seat;
-  //     });
 
-  //     // Check if the seats being grouped already belong to an existing group
-  //     const existingGroups = groups.filter(
-  //       (g) => !g.seatIds.every((seatId) => selectedSeatIds.includes(seatId))
-  //     );
-
-  //     // Set groups to include the new group, without duplicating existing groups
-  //     setGroups([...existingGroups, group]);
-
-  //     // Update seats state
-  //     setSeats(updatedSeats);
-  //     setSelectedSeatIds([]); // Clear selection after grouping
-  //   }
-  // };
-
-  // Function to ungroup selected seats
-  // const ungroupSelectedSeats = () => {
-  //   if (selectedSeatIds.length > 0) {
-  //     const updatedSeats = [...seats]; // Create a copy of the seats array to avoid direct state mutation
-
-  //     // Loop through each seat and remove the groupId for selected seats
-  //     updatedSeats.forEach((seat) => {
-  //       if (selectedSeatIds.includes(seat.id)) {
-  //         seat.groupId = null; // Remove the groupId
-
-  //       }
-  //     });
-
-  //     // Update the seats state with the modified array
-  //     setSeats(updatedSeats);
-
-  //     // Remove groups that no longer have any seats
-  //     const updatedGroups = groups.filter(
-  //       (group) =>
-  //         !group.seatIds.every((seatId) => selectedSeatIds.includes(seatId))
-  //     );
-
-  //     setGroups(updatedGroups);
-  //     setSelectedSeatIds([]); // Clear selection after ungrouping
-  //   }
-  // };
-
-  const updateSeatLabels = () => {
-    const stage = stageRef.current;
-  
-    if (selectedSeatIds.length > 0 && stage) {
-      const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
-      if (!firstSeat || !firstSeat.groupId) return;
-  
-      const groupSeats = seats.filter(
-        (seat) => seat.groupId === firstSeat.groupId
-      );
-  
-      let currentNumber = startNumber;
-  
-      const updatedSeats = groupSeats.map((seat, index) => {
-        let newLabel;
-        if (isLabelLeftToRight) {
-          newLabel = `${currentNumber++}`;
-        } else {
-          newLabel = `${startNumber + groupSeats.length - 1 - index}`;
-        }
-        return { ...seat, label: newLabel };
-      });
-  
-      setSeats((prevSeats) =>
-        prevSeats.map((seat) =>
-          seat.groupId === firstSeat.groupId
-            ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
-            : seat
-        )
-      );
-    }
-  };
-  
-  
-
-  const handleToggleLabelDirection = () => {
-    if (selectedSeatIds.length === 0) return;
-  
-    const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
-    if (!firstSeat || !firstSeat.groupId) return;
-  
-    const groupSeats = seats.filter(
-      (seat) => seat.groupId === firstSeat.groupId
-    );
-  
-    // Store the current labels before changing direction
-    const currentLabels = groupSeats.map((seat) => seat.label);
-  
-    // Reverse the order of the current labels
-    const updatedSeats = groupSeats.map((seat, index) => ({
-      ...seat,
-      label: currentLabels[currentLabels.length - 1 - index], // Assign reversed labels
-    }));
-  
-    setSeats((prevSeats) =>
-      prevSeats.map((seat) =>
-        seat.groupId === firstSeat.groupId
-          ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
-          : seat
-      )
-    );
-  
-    setIsLabelLeftToRight(!isLabelLeftToRight);
-  
-    // Log the current labels (optional)
-    console.log("Current Labels (Reversed):", currentLabels.reverse());
-  };
-  
   const handleMouseDown = (e) => {
     if (e.target !== stageRef.current) return;
 
@@ -270,7 +147,7 @@ const SeatPlan = () => {
       // Start creating seats: initialize start point for dragging
       setStartPoint({ x, y });
       setIsSelecting(true);
-      setIsCreatingSeats(true); // This will trigger seat creation on drag
+    //  setIsCreatingSeats(true); // This will trigger seat creation on drag
     } else if (activeTool === "select") {
       // Start selection process
       setSelectionRect({ x, y, width: 0, height: 0 });
@@ -397,16 +274,6 @@ const SeatPlan = () => {
     setStartPoint(null);
   };
 
-  // Function to check if two rectangles intersect
-  const rectsIntersect = (r1, r2) => {
-    return !(
-      r2.x > r1.x + r1.width ||
-      r2.x + r2.width < r1.x ||
-      r2.y > r1.y + r1.height ||
-      r2.y + r2.height < r1.y
-    );
-  };
-
   const deleteSelectedSeats = () => {
     const stage = stageRef.current;
 
@@ -460,15 +327,137 @@ const SeatPlan = () => {
       stage.batchDraw();
     }
   };
+  const updateSeatLabels = () => {
+    const stage = stageRef.current;
 
-  const handleStartCreatingSeats = () => {
-    setIsCreatingSeats(true);
+    if (selectedSeatIds.length > 0 && stage) {
+      const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
+      if (!firstSeat || !firstSeat.groupId) return;
+
+      const groupSeats = seats.filter(
+        (seat) => seat.groupId === firstSeat.groupId
+      );
+
+      let currentNumber = startNumber;
+
+      const updatedSeats = groupSeats.map((seat, index) => {
+        let newLabel;
+        if (isLabelLeftToRight) {
+          newLabel = `${currentNumber++}`;
+        } else {
+          newLabel = `${startNumber + groupSeats.length - 1 - index}`;
+        }
+        return { ...seat, label: newLabel };
+      });
+
+      setSeats((prevSeats) =>
+        prevSeats.map((seat) =>
+          seat.groupId === firstSeat.groupId
+            ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
+            : seat
+        )
+      );
+    }
   };
 
-  const handleStopCreatingSeats = () => {
-    setIsCreatingSeats(false);
+  const handleToggleLabelDirection = () => {
+    if (selectedSeatIds.length === 0) return;
+
+    const firstSeat = seats.find((seat) => selectedSeatIds.includes(seat.id));
+    if (!firstSeat || !firstSeat.groupId) return;
+
+    const groupSeats = seats.filter(
+      (seat) => seat.groupId === firstSeat.groupId
+    );
+
+    // Store the current labels before changing direction
+    const currentLabels = groupSeats.map((seat) => seat.label);
+
+    // Reverse the order of the current labels
+    const updatedSeats = groupSeats.map((seat, index) => ({
+      ...seat,
+      label: currentLabels[currentLabels.length - 1 - index], // Assign reversed labels
+    }));
+
+    setSeats((prevSeats) =>
+      prevSeats.map((seat) =>
+        seat.groupId === firstSeat.groupId
+          ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
+          : seat
+      )
+    );
+
+    setIsLabelLeftToRight(!isLabelLeftToRight);
+
+    // Log the current labels (optional)
+    console.log("Current Labels (Reversed):", currentLabels.reverse());
   };
 
+  // Function to check if two rectangles intersect
+  const rectsIntersect = (r1, r2) => {
+    return !(
+      r2.x > r1.x + r1.width ||
+      r2.x + r2.width < r1.x ||
+      r2.y > r1.y + r1.height ||
+      r2.y + r2.height < r1.y
+    );
+  };
+
+
+
+
+const handleIncreaseSpacing = () => updateSeatSpacing(5); 
+const handleDecreaseSpacing = () => updateSeatSpacing(-5); 
+
+const updateSeatSpacing = (adjustment) => {
+  const stage = stageRef.current;
+  const transformer = transformerRef.current;
+
+  setSeats((prevSeats) => {
+    const firstSeat = prevSeats.find((seat) =>
+      selectedSeatIds.includes(seat.id)
+    );
+    if (!firstSeat || !firstSeat.groupId) return prevSeats;
+
+    const groupSeats = prevSeats.filter(
+      (seat) => seat.groupId === firstSeat.groupId
+    );
+
+    // Calculate current spacing
+    const currentSpacing =
+      groupSeats.length > 1
+        ? groupSeats[1].x - groupSeats[0].x - groupSeats[0].width
+        : 0;
+
+    // Calculate new spacing and ensure it's not below 0
+    const newSpacing = Math.max(currentSpacing + adjustment, 0);
+
+    // Update positions based on new spacing
+    const updatedSeats = groupSeats.map((seat, index) => {
+      const newX = groupSeats[0].x + index * (seat.width + newSpacing);
+      return { ...seat, x: newX };
+    });
+
+    // Update the seat spacing state
+    setSeatSpacing(Math.round(newSpacing));
+
+    // Update the seat state with new positions
+    return prevSeats.map((seat) =>
+      seat.groupId === firstSeat.groupId
+        ? updatedSeats.find((updatedSeat) => updatedSeat.id === seat.id)
+        : seat
+    );
+  });
+
+  // Ensure the transformer box is updated
+  setTimeout(() => {
+    const selectedNodes = selectedSeatIds.map((id) =>
+      stage.findOne(`#${id}`)
+    );
+    transformer.nodes(selectedNodes);
+    transformer.getLayer().batchDraw();
+  }, 0);
+};   
   const toggleGrid = () => {
     setGridVisible(!gridVisible);
   };
@@ -506,9 +495,13 @@ const SeatPlan = () => {
     return gridElements;
   };
 
+  const exportToJson = () => {
+    const jsonData = JSON.stringify(seats, null, 2);
+    console.log(jsonData); // You can log it, send it to a server, or download it
+  };
+
   return (
     <div>
-      {/* Input for seat count */}
       <div style={{ padding: "10px", textAlign: "center" }}>
         <div style={{ padding: "10px", textAlign: "center" }}>
           <button onClick={() => setActiveTool("draw")}>Draw Tool</button>
@@ -519,9 +512,16 @@ const SeatPlan = () => {
           <button onClick={deleteSelectedSeats}>Delete</button>
           <button onClick={toggleSingleSelect}>Single Click</button>
           <button onClick={handleToggleLabelDirection}>
+ 
             Toggle Label Direction
           </button>
+          <button onClick={exportToJson}>Export As JSON</button>
         </div>
+        {/* <div>
+          <button onClick={handleIncreaseSeats}>Increase Seats</button>
+          <button onClick={handleDecreaseSeats}>Decrease Seats</button>
+          <span>Number of Seats: {seatCount}</span>
+        </div> */}
         <div>
           <input
             type="number"
@@ -530,6 +530,11 @@ const SeatPlan = () => {
             placeholder="Enter starting number"
           />
           <button onClick={updateSeatLabels}>Set Starting Number</button>
+        </div>
+        <div>
+        <button onClick={handleIncreaseSpacing}>Increase Spacing</button>
+        <button onClick={handleDecreaseSpacing} >Decrease Spacing</button>
+        <p>Current Spacing: {seatSpacing}px</p>
         </div>
       </div>
 
