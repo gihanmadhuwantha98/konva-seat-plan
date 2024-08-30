@@ -618,11 +618,11 @@ const combineSeats = () => {
       const updatedSeats = prevSeats.map((seat) => {
           if (selectedSeatIds.includes(seat.id)) {
               if (seat.id === firstSeat.id) {
-                  return { ...seat, x: firstSeat.x, image: leftCombineSeatImage };
+                  return { ...seat, x: firstSeat.x,y:firstSeat.y, image: leftCombineSeatImage };
               } else if (seat.id === lastSeat.id) {
-                  return { ...seat, x: lastSeat.x, image: rightCombineSeatImage };
+                  return { ...seat, x: lastSeat.x, y:firstSeat.y, image: rightCombineSeatImage };
               } else {
-                  return { ...seat, image: middleombineSeatImage };
+                  return { ...seat, image: middleombineSeatImage,y:firstSeat.y };
               }
           }
           return seat;
